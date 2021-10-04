@@ -29,20 +29,23 @@ export default function SigninScreen(props) {
     try {
       const backendUrl = process.env.REACT_APP_BACK_END_URL;
 
-      const { data } = await axios.post(
-        `${backendUrl}/users`,
+      const { data: { data: { signin: { message, token } } } } = await axios.post(
+        `${backendUrl}/graphql`,
         {
-          query: `{
-            Signin(email: "${email}", password:"${password}"){
+          query: `query{
+            signin(email: "${email}", password:"${password}"){
               token
             }
           }`
         }
       );
-
-      const { token } = data.data.Signin;
-      document.cookie = `token=${token}`;
-      setRedirect(true);
+      if (token) {
+        document.cookie = `token=${token}`;
+        setRedirect(true);
+      }
+      if (message) {
+        setError(message)
+      }
 
     } catch (err) {
       const message = err.message.data || err.message;

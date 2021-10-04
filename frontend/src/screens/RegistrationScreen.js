@@ -1,19 +1,9 @@
 import axios from 'axios';
-import React, { useState } from 'react';
-import { gql, useMutation } from '@apollo/client';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useHistory } from 'react-router-dom';
+import { Redirect } from 'react-router';
 
-const CREATE_USER = gql`
-  mutation CreateUser($name: String!, $email: String!, $password: String!) {
-    createUser(name: $name, email: $email, password: $password) {
-      id
-      name
-      email
-      message
-      token
-    }
-  }
-`;
+
 
 
 export default function RegistrationScreen(props) {
@@ -22,42 +12,56 @@ export default function RegistrationScreen(props) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [redirect, setRedirect] = useState(false);
+  const history = useHistory();
+  useEffect(() => {
+    if (redirect) {
+      history.push("/todo");
+    }
+  }, [redirect, history]);
 
-  const [createUser, { data, loading, error }] = useMutation(CREATE_USER)
+  if (document.cookie) {
+    const token = document.cookie.split(';').find(x => x.trim().startsWith('token'));
+    if (token) {
+      return (
+        <Redirect to="/todo" />
+      );
+    }
+  }
 
-  console.log(data, error);
   const submitHandler = async (e) => {
     e.preventDefault();
+    try {
     if (password !== confirmPassword) {
       return alert('Password and confirm password are not the same');
     } else {
-        createUser({variables: {name, email, password}})
+
+      const backendUrl = process.env.REACT_APP_BACK_END_URL;
+      const { data: { data: { createUser: { message, token } } } } = await axios.post(
+        `${backendUrl}/graphql`,
+        {
+          query: `mutation{
+          createUser(name: "${name}", email: "${email}", password: "${password}"){
+            message
+            token
+          }
+        }`
+        }
+      );
+      if (token) {
+        document.cookie = `token=${token}`;
+        setRedirect(true);
+      }
+      if (message) {
+        setErrorMessage(message)
+      }
     }
+  } catch (err) {
+    const message = err.message.data || err.message;
+    setErrorMessage(message);
+  }
   };
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  // const backendUrl = process.env.REACT_APP_BACK_END_URL;
-  // const data = await axios.post(
-  //   `${backendUrl}/users`,
-  //   {
-  //     query: `{
-  //     createUser(name: "${name}", email: "${email}", password: "${password}"){
-  //       message
-  //       token
-  //     }
-  //   }`
-  //   }
-  // );
-
-  // const { token, message } = data.data.Signin;
-
-  // document.cookie = `token=${token}`;
-  // document.cookie = `token=${data.token}`;
-  // props.history.push("/todo");
-
-// } catch (err) {
-//   const message = err.message.data || err.message;
-//   setErrorMessage(message);
-// }
+  
   return (
     <div>
       <form className="form" onSubmit={submitHandler}>

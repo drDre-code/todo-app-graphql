@@ -10,7 +10,7 @@ export default function TodoScreen(props) {
     const [todo, setTodo] = useState('');
     const [percent, setPercent] = useState('');
 
-    const history = useHistory()
+    const history = useHistory();
 
     useEffect(() => {
 
@@ -29,7 +29,11 @@ export default function TodoScreen(props) {
             const backendUrl = process.env.REACT_APP_BACK_END_URL || "http://localhost:3002";
 
             await axios.post(
-                `${backendUrl}/api/todos/mine`, { todo },
+                `${backendUrl}/graphql`, {
+                query: `mutation{
+                        createTask(task: "${todo}")
+                      }`
+            },
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -40,7 +44,7 @@ export default function TodoScreen(props) {
             const input = document.querySelector('.todoinput');
             input.style.display = 'none';
             fetchHandler();
-            console.log(props);
+
 
         } catch (err) {
             console.log(err);
@@ -55,20 +59,20 @@ export default function TodoScreen(props) {
             if (done.value === "done") {
                 status = true;
             }
-            console.log(done.value, status);
         }
 
         try {
             const backendUrl = process.env.REACT_APP_BACK_END_URL || "http://localhost:3002";
 
-            await axios.put(
-                `${backendUrl}/api/todos/mine/${id}`, { updatedTodo, status },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
+            await axios.post(`${backendUrl}/graphql`, {
+                query: `mutation {
+                        updateTask(id: "${id}", task: "${updatedTodo}", status: ${status})
+                      }`
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
 
             fetchHandler();
 
@@ -84,17 +88,21 @@ export default function TodoScreen(props) {
             console.log(err);
         }
     };
+
     const DeleteHandler = async (id) => {
         try {
             const backendUrl = process.env.REACT_APP_BACK_END_URL;
 
-            await axios.delete(
-                `${backendUrl}/api/todos/mine/${id}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+            await axios.post(
+                `${backendUrl}/graphql`, {
+                query: `mutation {
+                            deleteTask(id: "${id}")
+                          }`
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
             );
 
             fetchHandler();
@@ -112,31 +120,42 @@ export default function TodoScreen(props) {
 
             const backendUrl = process.env.REACT_APP_BACK_END_URL || "http://localhost:3002";
 
-            const { data } = await axios.get(
-                `${backendUrl}/api/todos/mine`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+            const { data: { data: { todos: data } } } = await axios.post(`${backendUrl}/graphql`, {
+                query: `query{
+                    todos{
+                      name
+                      todos {
+                        _id
+                        email
+                        task
+                        status
+                      }
+                    }
+                  }`
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
             );
+
             if (data) {
                 setName(data.name);
                 const completed = data.todos.filter(value => value.status).length;
                 const total = data.todos.length;
                 const percentage = completed / total * 100;
-                setPercent(percentage)
+                setPercent(percentage);
                 const info = data.todos.map((value, index) => {
                     return (
                         <div key={index} className="todo">
                             <div className="drey">
                                 <div className={`content${value._id}`}>
                                     <span className="checker"><i className={value.status ? "fa fa-check-circle" : "fa fa-circle-o"}></i></span>
-                                    <span className={`content ${value._id}`}>{value.message}</span>
+                                    <span className={`content ${value._id}`}>{value.task}</span>
                                 </div>
                                 <div className="updateinput addbutton" id={`update${value._id}`}>
                                     <div>
-                                        <input className={`input${value._id}`} type="text" placeholder={value.message} />
+                                        <input className={`input${value._id}`} type="text" placeholder={value.task} />
                                         <div className="status" id={`done${value._id}`}> Status:
 
                                             <input type="radio" name="status" value="done" />
@@ -187,7 +206,7 @@ export default function TodoScreen(props) {
             const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
             document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
         }
-        history.push("/")
+        history.push("/");
     };
 
 

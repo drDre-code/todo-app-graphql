@@ -9,7 +9,6 @@ import TodoScreen from './screens/TodoScreen';
 
 
 function App(props) {
-  // const [signout, setSignout] = useState(false);
 
   const Check = () => {
     const value = document.cookie.split(';').find(x => x.trim().startsWith('token'));

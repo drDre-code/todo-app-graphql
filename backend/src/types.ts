@@ -40,14 +40,13 @@ export const userType = new GraphQLObjectType({
   })
 });
 
-export const todoType = new GraphQLObjectType({
+const todo = new GraphQLObjectType({
   name: 'todo',
   description: 'todo Information',
   fields: () => ({
-    id: {
+    _id: {
       type: GraphQLID,
       description: "The task's unique id",
-      resolve: (source) => source._id
     },
     email: {
       type: GraphQLString,
@@ -64,3 +63,18 @@ export const todoType = new GraphQLObjectType({
     }
   })
 });
+
+export const todoType = new GraphQLObjectType({
+  name: "todoAll",
+  description: "get all todos",
+  fields: () => ({
+    name: {
+      type: GraphQLString,
+      description: "The name of the user",
+    },
+    todos: {
+      type: new GraphQLList(todo),
+      description: "The todos of the user",
+    }
+  })
+})
